@@ -1,62 +1,115 @@
-#include <glad/glad.h>
-#include "GLFW/glfw3.h"
+#include "src/gl_impl.h"
 
-#include <iostream>
+const char *vertexShaderSource =
+    "#version 330 core\n"
+    "layout (location = 0) in vec3 aPos;\n"
+    "layout (location = 1) in vec3 aColor;\n"
+    "out vec3 ourColor;\n"
+    "void main()\n"
+    "{\n"
+    "   gl_Position = vec4(aPos, 1.0);\n"
+    "   ourColor = aColor;\n"
+    "}\0";
+
+const char *fragmentShaderSource =
+    "#version 330 core\n"
+    "out vec4 FragColor;\n"
+    "in vec3 ourColor;\n"
+    "void main()\n"
+    "{\n"
+    "   FragColor = vec4(ourColor, 1.0f);\n"
+    "}\n\0";
+
+using namespace gofran;
+
+const unsigned int SCR_WIDTH = 800;
+const unsigned int SCR_HEIGHT = 600;
 
 static void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+
 static void processInput(GLFWwindow *window);
 
 int main(int argc, const char* argv[]) {
-    // 初始化GLFW
     glfwInit();
-    
-    // 设置为OpenGL版本为3.3+
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    
-    // 使用核心模式
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+#ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    
-    // 创建窗口
-    GLFWwindow* window = glfwCreateWindow(800, 600, "LearnOpenGL", NULL, NULL);
-    if (nullptr == window) {
+#endif
+
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+    if (window == NULL) {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return -1;
     }
-    // 将该窗口作为当前线程的主上下文
     glfwMakeContextCurrent(window);
-    
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
     // 加载GLFW函数指针，在调用任何OpenGL函数之前必须调用该函数
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
 
-    // 设置窗口渲染大小
-    glViewport(0, 0, 800, 600);
-    // 设置窗口大小改变回调
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    
-    // 检查一次GLFW是否被要求退出
-    while(!glfwWindowShouldClose(window)) {
-        // 处理当前窗口输入
+    GLPipeline pipeline;
+
+    int res = 0;
+    std::string vertex_str(vertexShaderSource);
+    res = pipeline.set_vertex_shader(vertex_str);
+
+    std::string fragment_str(fragmentShaderSource);
+    res = pipeline.set_fragment_shader(fragment_str);
+    res = pipeline.link();
+    res = pipeline.use();
+
+    float vertices[] = {
+        // positions         // colors
+        0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  // bottom right
+        -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  // bottom left
+        0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f   // top
+    };
+
+    GLBuffer vbo(gli_buffertype::gli_array_buffer);
+    vbo.generate();
+    vbo.bind();
+    vbo.set_data(vertices, sizeof(vertices));
+
+    GLVerterArray vao;
+    vao.generate();
+    vao.bind();
+    vao.set_attribute(0, 3, gli_type::gli_float, false, 6 * sizeof(float), 0);
+    vao.set_attribute(1, 3, gli_type::gli_float, false, 6 * sizeof(float), 3 * sizeof(float));
+    vao.unbind();
+
+    // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
+    // glBindVertexArray(0);
+
+    // as we only have a single shader, we could also just activate our shader once beforehand if we want to
+    // glUseProgram(shaderProgram);
+
+    // render loop
+    // -----------
+    while (!glfwWindowShouldClose(window)) {
         processInput(window);
-        
-        // 设置清空屏幕所用的颜色
+
+        // render
+        // ------
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        // 清空屏幕颜色缓冲
         glClear(GL_COLOR_BUFFER_BIT);
-        
-        // 交换颜色缓冲（它是一个储存着GLFW窗口每一个像素颜色值的大缓冲），
-        // 它在这一迭代中被用来绘制，并且将会作为输出显示在屏幕上
+
+        // render the triangle
+        vao.bind();
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+
+        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+        // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
-        // 检查是否有触发事件（键盘输入、鼠标移动等）、更新窗口状态，并调用对应的回调函数
         glfwPollEvents();
     }
 
-    // 关闭窗口，释放资源
     glfwTerminate();
     return 0;
 }
@@ -66,7 +119,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 }
 
 void processInput(GLFWwindow *window) {
-    // 如果用户按下ESC键，则应该退出
-    if(GLFW_PRESS == glfwGetKey(window, GLFW_KEY_ESCAPE))
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 }
