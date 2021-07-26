@@ -25,10 +25,15 @@ using namespace gofran;
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
+<<<<<<< HEAD
 static int create_shader(int shder_type, int& shader_id, const char* shader_src);
+=======
+static void init_opengl_env();
+
+>>>>>>> Add gl wrapper
 static void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
-static void processInput(GLFWwindow *window);
+static void process_input(GLFWwindow *window);
 
 const char *vertexShaderSource =
     "#version 330 core\n"
@@ -51,14 +56,7 @@ const char *fragmentShaderSource =
 void my_fun();
 
 int main(int argc, const char* argv[]) {
-    glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-#ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
+    init_opengl_env();
 
     GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
     if (window == NULL) {
@@ -114,7 +112,7 @@ int main(int argc, const char* argv[]) {
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window)) {
-        processInput(window);
+        process_input(window);
 
         // render
         // ------
@@ -144,11 +142,22 @@ int main(int argc, const char* argv[]) {
     return 0;
 }
 
+void init_opengl_env() {
+    glfwInit();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+#ifdef __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+}
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
-void processInput(GLFWwindow *window) {
+void process_input(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 }
