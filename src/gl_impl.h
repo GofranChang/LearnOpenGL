@@ -20,7 +20,7 @@ enum gli_status {
     gli_notbind,
 };
 
-enum gli_shadertype {
+enum class gli_shadertype {
     gli_vertex_shader,
     gli_fragment_shader,
     gli_unknown_shader,
@@ -102,7 +102,7 @@ private:
             case gli_shadertype::gli_vertex_shader:
                 return GL_VERTEX_SHADER;
                 break;
-            case gli_fragment_shader:
+            case gli_shadertype::gli_fragment_shader:
                 return GL_FRAGMENT_SHADER;
                 break;
             default:
@@ -493,6 +493,8 @@ public:
         set_notbinded();
         return gli_success;
     }
+
+    gli_status set_tex_parameteri();
 
 private:
     static unsigned int texturetype_2_gltexturetype(const gli_texturetype& type) {
