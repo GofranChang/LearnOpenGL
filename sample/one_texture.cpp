@@ -42,16 +42,39 @@ int main(int argc, const char* argv[]) {
         return -1;
     }
 
+    const char *vertexShaderSource =
+            "#version 330 core\n"
+            "layout (location = 0) in vec3 aPos;\n"
+            "layout (location = 1) in vec3 aColor;\n"
+            "layout (location = 2) in vec2 aTexCoord;\n"
+            "out vec3 ourColor;\n"
+            "out vec2 TexCoord;\n"
+            "void main()\n"
+            "{\n"
+            "    gl_Position = vec4(aPos, 1.0);\n"
+            "    ourColor = aColor;\n"
+            "    TexCoord = aTexCoord;\n"
+            "}\n\0";
+
+    const char* fragmentShaderSource =
+            "#version 330 core\n"
+            "out vec4 FragColor;\n"
+            "in vec3 ourColor;\n"
+            "in vec2 TexCoord;\n"
+            "uniform sampler2D ourTexture;\n"
+            "void main()\n"
+            "{\n"
+            "    FragColor = texture(ourTexture, TexCoord);\n"
+            "}\n\0";
+
     GLPipeline pipeline;
 
     int res = 0;
-    // std::string vertex_str(vertexShaderSource);
-    // res = pipeline.set_vertex_shader(vertex_str);
-    res = pipeline.set_vertex_file("../../shaders/4.2_vertex.glsl");
+    std::string vertex_str(vertexShaderSource);
+    res = pipeline.set_vertex_shader(vertex_str);
 
-    // std::string fragment_str(fragmentShaderSource);
-    // res = pipeline.set_fragment_shader(fragment_str);
-    res = pipeline.set_fragment_file("../../shaders/4.2_fragment.glsl");
+    std::string fragment_str(fragmentShaderSource);
+    res = pipeline.set_fragment_shader(fragment_str);
     res = pipeline.link();
 
     float vertices[] = {
@@ -84,63 +107,46 @@ int main(int argc, const char* argv[]) {
     vao.set_attribute(1, 3, gli_type::GLI_FLOAT, false, 8 * sizeof(float), 3 * sizeof(float));
     vao.set_attribute(2, 3, gli_type::GLI_FLOAT, false, 8 * sizeof(float), 6 * sizeof(float));
 
-    GLTextures texture1(gli_texturetype::GLI_TEXTURE_2D);
-    texture1.generate();
-    texture1.bind();
-    texture1.set_tex_parameteri(gli_texturesymbol::GLI_TEXTURE_WRAP_S, gli_textureparams::GLI_REPEAT);
-    texture1.set_tex_parameteri(gli_texturesymbol::GLI_TEXTURE_WRAP_T, gli_textureparams::GLI_REPEAT);
-    texture1.set_tex_parameteri(gli_texturesymbol::GLI_TEXTURE_MIN_FILTER, gli_textureparams::GLI_LINEAR);
-    texture1.set_tex_parameteri(gli_texturesymbol::GLI_TEXTURE_MAG_FILTER, gli_textureparams::GLI_LINEAR);
+    GLTextures texture(gli_texturetype::GLI_TEXTURE_2D);
+    texture.generate();
+    texture.bind();
+    texture.set_tex_parameteri(gli_texturesymbol::GLI_TEXTURE_WRAP_S, gli_textureparams::GLI_REPEAT);
+    texture.set_tex_parameteri(gli_texturesymbol::GLI_TEXTURE_WRAP_T, gli_textureparams::GLI_REPEAT);
+    texture.set_tex_parameteri(gli_texturesymbol::GLI_TEXTURE_MIN_FILTER, gli_textureparams::GLI_LINEAR);
+    texture.set_tex_parameteri(gli_texturesymbol::GLI_TEXTURE_MAG_FILTER, gli_textureparams::GLI_LINEAR);
 
     int width, height, nrChannels;
     unsigned char *data = stbi_load("container.jpg", &width, &height, &nrChannels, 0);
     if (data) {
-        texture1.load_texture(width, height, data, gli_pixelformat::GLI_RGB);
+        texture.load_texture(width, height, data);
     }
     else {
         std::cout << "Failed to load texture" << std::endl;
     }
-    stbi_image_free(data);
-    texture1.unbind();
-
-    GLTextures texture2(gli_texturetype::GLI_TEXTURE_2D);
-    texture2.generate();
-    texture2.bind();
-    texture2.set_tex_parameteri(gli_texturesymbol::GLI_TEXTURE_WRAP_S, gli_textureparams::GLI_REPEAT);
-    texture2.set_tex_parameteri(gli_texturesymbol::GLI_TEXTURE_WRAP_T, gli_textureparams::GLI_REPEAT);
-    texture2.set_tex_parameteri(gli_texturesymbol::GLI_TEXTURE_MIN_FILTER, gli_textureparams::GLI_LINEAR);
-    texture2.set_tex_parameteri(gli_texturesymbol::GLI_TEXTURE_MAG_FILTER, gli_textureparams::GLI_LINEAR);
-
-    // int width, height, nrChannels;
-    data = stbi_load("awesomeface.png", &width, &height, &nrChannels, 0);
-    if (data) {
-        texture2.load_texture(width, height, data, gli_pixelformat::GLI_RGBA);
-    }
-    else {
-        std::cout << "Failed to load texture" << std::endl;
-    }
-    stbi_image_free(data);
-    texture2.unbind();
-
-    pipeline.use();
-    pipeline.set_uniform1("texture1", 0);
-    pipeline.set_uniform1("texture2", 1);
 
     while (!glfwWindowShouldClose(window)) {
+        // input
+        // -----
         process_input(window);
 
+        // render
+        // ------
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        texture1.active(0);
-        texture1.unbind();
-        texture2.active(1);
-        texture2.unbind();
+        // bind Texture
+        // glBindTexture(GL_TEXTURE_2D, texture1);
+        texture.bind();
 
+        // render container
+        // ourShader.use();
         pipeline.use();
+        // glBindVertexArray(VAO);
         vao.bind();
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
+        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+        // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
